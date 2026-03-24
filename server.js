@@ -54,7 +54,7 @@ const transporter = nodemailer.createTransport({
   auth: {
     user: "prachigaydhani220@gmail.com",
 
-    pass: "yxze ojhh rcip jucq"
+    pass: process.env.EMAIL_PASS
   },
 
   connectionTimeout: 30000,
