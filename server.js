@@ -54,7 +54,7 @@ const transporter = nodemailer.createTransport({
 
   auth: {
     user: "prachigaydhani220@gmail.com",
-    pass: "YOUR_NEW_APP_PASSWORD"
+    pass: "yxze ojhh rcip jucq"
   },
 
   tls: {
@@ -408,7 +408,16 @@ db.query(
         `
       };
 
-      transporter.sendMail(mailOptions);
+      transporter.sendMail(mailOptions, (error, info) => {
+
+  if (error) {
+    console.log("Email error:", error);
+  } 
+  else {
+    console.log("Email sent:", info.response);
+  }
+
+});
 
       res.send({
         message: "Gift created successfully",
