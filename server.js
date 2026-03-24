@@ -52,14 +52,9 @@ const transporter = nodemailer.createTransport({
   service: "gmail",
 
   auth: {
-    user: "prachigaydhani220@gmail.com",
-
+    user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
-  },
-
-  connectionTimeout: 30000,
-  greetingTimeout: 30000,
-  socketTimeout: 30000
+  }
 
 });
 
@@ -409,12 +404,11 @@ db.query(
         `
       };
 
-      transporter.sendMail(mailOptions, (error, info) => {
+     transporter.sendMail(mailOptions, (error, info) => {
 
   if (error) {
     console.log("Email error:", error);
-  } 
-  else {
+  } else {
     console.log("Email sent:", info.response);
   }
 
