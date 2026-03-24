@@ -58,6 +58,9 @@ const transporter = nodemailer.createTransport({
 
 });
 
+console.log("EMAIL USER:", process.env.EMAIL_USER);
+console.log("EMAIL PASS:", process.env.EMAIL_PASS ? "Loaded" : "Missing");
+
 // ============================
 // 🟢 SIGNUP API
 // ============================
@@ -393,7 +396,7 @@ db.query(
       const giftLink = `https://lucklove-backend.onrender.com/gift/${giftCode}`;
 
       const mailOptions = {
-        from: '"LuckLove 🎁" <prachigaydhani220@gmail.com>',
+        from: `"LuckLove 🎁" <${process.env.EMAIL_USER}>`,
         to: receiverEmail,
         subject: '🎁 You received a LuckLove Gift!',
         html: `
@@ -404,11 +407,12 @@ db.query(
         `
       };
 
-     transporter.sendMail(mailOptions, (error, info) => {
+      transporter.sendMail(mailOptions, (error, info) => {
 
   if (error) {
     console.log("Email error:", error);
-  } else {
+  } 
+  else {
     console.log("Email sent:", info.response);
   }
 
@@ -505,7 +509,7 @@ app.post('/send-gift', authenticateToken, (req, res) => {
     );
 
     const mailOptions = {
-      from: '"LuckLove 🎁" <prachigaydhani220@gmail.com>',
+      from: `"LuckLove 🎁" <${process.env.EMAIL_USER}>`,
       to: receiverEmail,
       subject: '🎁 You received a gift!',
       html: `
