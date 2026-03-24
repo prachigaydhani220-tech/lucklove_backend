@@ -48,10 +48,17 @@ db.connect((err) => {
 // EMAIL TRANSPORT
 // ============================
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false, // VERY IMPORTANT
+
   auth: {
-    user: 'prachigaydhani220@gmail.com',
-    pass: 'yxze ojhh rcip jucq'
+    user: "prachigaydhani220@gmail.com",
+    pass: "YOUR_NEW_APP_PASSWORD"
+  },
+
+  tls: {
+    rejectUnauthorized: false
   }
 });
 
