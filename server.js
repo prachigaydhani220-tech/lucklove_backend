@@ -3,7 +3,9 @@ const mysql = require('mysql2');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const app = express();
 
@@ -42,33 +44,6 @@ const db = mysql.createConnection({
 db.connect((err) => {
   if (err) console.log('Database connection failed', err);
   else console.log('MySQL Connected');
-});
-
-// ============================
-// EMAIL TRANSPORT
-// ============================
-const transporter = nodemailer.createTransport({
-
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
-
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-
-});
-
-// verify connection
-transporter.verify(function(error, success) {
-
-  if (error) {
-    console.log("SMTP ERROR:", error);
-  } else {
-    console.log("SMTP READY");
-  }
-
 });
 
 // ============================
@@ -344,7 +319,7 @@ app.post('/wallet/transfer', authenticateToken, (req, res) => {
 // =====================================================
 // 🎁 NEW FEATURE — CREATE GIFT FOR ANY EMAIL
 // =====================================================
-app.post('/create-gift', authenticateToken, (req, res) => {
+app.post('/create-gift', authenticateToken, async (req, res) => {
 
   const senderId = req.user.id;
   const { receiverEmail, amount, distributionType } = req.body;
@@ -404,28 +379,24 @@ db.query(
 
       // 5️⃣ SEND EMAIL
       const giftLink = `https://lucklove-backend.onrender.com/gift/${giftCode}`;
+      
 
-      const mailOptions = {
-        from: `"LuckLove 🎁" <${process.env.EMAIL_USER}>`,
-        to: receiverEmail,
-        subject: '🎁 You received a LuckLove Gift!',
-        html: `
-          <h2>LuckLove Gift 🎁</h2>  
-          <p>You received <b>₹${amount}</b></p>
-          <p>Click below to open your gift:</p>
-          <a href="${giftLink}">${giftLink}</a>
-        `
-      };
-
-      transporter.sendMail(mailOptions, (error, info) => {
-
-  if (error) {
-    console.log("Email error:", error);
-  } 
-  else {
-    console.log("Email sent:", info.response);
-  }
-
+ resend.emails.send({
+  from: 'LuckLove <onboarding@resend.dev>',
+  to: receiverEmail,
+  subject: '🎁 You received a LuckLove Gift!',
+  html: `
+    <h2>LuckLove Gift 🎁</h2>
+    <p>You received <b>₹${amount}</b></p>
+    <p>Click below to open your gift:</p>
+    <a href="${giftLink}">${giftLink}</a>
+  `
+})
+.then(() => {
+  console.log("Email sent successfully");
+})
+.catch((error) => {
+  console.log("Email error:", error);
 });
 
       res.send({
@@ -487,7 +458,7 @@ db.query(
 // ============================
 // 🎁 SEND GIFT + EMAIL
 // ============================
-app.post('/send-gift', authenticateToken, (req, res) => {
+app.post('/send-gift', authenticateToken, async (req, res) => {
 
   const senderId = req.user.id;
   const { receiverEmail, amount } = req.body;
@@ -518,26 +489,24 @@ app.post('/send-gift', authenticateToken, (req, res) => {
       [senderId, receiverId, amount]
     );
 
-    const mailOptions = {
-      from: `"LuckLove 🎁" <${process.env.EMAIL_USER}>`,
-      to: receiverEmail,
-      subject: '🎁 You received a gift!',
-      html: `
-        <h2>LuckLove Gift Received 🎁</h2>
-        <p>You have received <b>₹${amount}</b> gift.</p>
-        <p>Open the LuckLove app to check your wallet.</p>
-        <br/>
-        <p>Thank you for using LuckLove ❤️</p>
-      `
-    };
-
-    transporter.sendMail(mailOptions, function(error, info){
-      if (error) {
-        console.log("Email error:", error);
-      } else {
-        console.log("Email sent:", info.response);
-      }
-    });
+  resend.emails.send({
+  from: 'LuckLove <onboarding@resend.dev>',
+  to: receiverEmail,
+  subject: '🎁 You received a gift!',
+  html: `
+    <h2>LuckLove Gift Received 🎁</h2>
+    <p>You have received <b>₹${amount}</b> gift.</p>
+    <p>Open the LuckLove app to check your wallet.</p>
+    <br/>
+    <p>Thank you for using LuckLove ❤️</p>
+  `
+})
+.then(() => {
+  console.log("Email sent successfully");
+})
+.catch((error) => {
+  console.log("Email error:", error);
+});
 
     res.send({ message: "Gift sent successfully ❤️" });
 
