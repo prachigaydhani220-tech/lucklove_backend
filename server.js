@@ -49,17 +49,31 @@ db.connect((err) => {
 // ============================
 const transporter = nodemailer.createTransport({
 
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
 
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
+  },
+
+  tls: {
+    rejectUnauthorized: false
   }
 
 });
 
-console.log("EMAIL USER:", process.env.EMAIL_USER);
-console.log("EMAIL PASS:", process.env.EMAIL_PASS ? "Loaded" : "Missing");
+transporter.verify(function(error, success) {
+
+  if (error) {
+    console.log("SMTP ERROR:", error);
+  } else {
+    console.log("SMTP READY");
+  }
+
+});
+
 
 // ============================
 // 🟢 SIGNUP API
@@ -400,7 +414,7 @@ db.query(
         to: receiverEmail,
         subject: '🎁 You received a LuckLove Gift!',
         html: `
-          <h2>LuckLove Gift 🎁</h2>
+          <h2>LuckLove Gift 🎁</h2>  
           <p>You received <b>₹${amount}</b></p>
           <p>Click below to open your gift:</p>
           <a href="${giftLink}">${giftLink}</a>
