@@ -58,12 +58,15 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS
   },
 
+  requireTLS: true,
+
   tls: {
     rejectUnauthorized: false
   }
 
 });
 
+// verify connection
 transporter.verify(function(error, success) {
 
   if (error) {
@@ -73,7 +76,6 @@ transporter.verify(function(error, success) {
   }
 
 });
-
 
 // ============================
 // 🟢 SIGNUP API
