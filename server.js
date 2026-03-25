@@ -382,7 +382,7 @@ db.query(
       
 
  resend.emails.send({
-  from: 'LuckLove <onboarding@resend.dev>',
+  from: 'LuckLove <prachigaydhani220@gmail.com>',
   to: receiverEmail,
   subject: '🎁 You received a LuckLove Gift!',
   html: `
@@ -490,7 +490,7 @@ app.post('/send-gift', authenticateToken, async (req, res) => {
     );
 
   resend.emails.send({
-  from: 'LuckLove <onboarding@resend.dev>',
+  from: 'LuckLove <prachigaydhani220@gmail.com>',
   to: receiverEmail,
   subject: '🎁 You received a gift!',
   html: `
