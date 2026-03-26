@@ -140,7 +140,7 @@ app.post('/login', (req, res) => {
     if (err) return res.status(500).send(err);
 
     if (result.length === 0) {
-      return res.status(401).send({
+      return res.status(401).send({  
         message: "Invalid email or password"
       });
     }
@@ -520,16 +520,20 @@ app.get('/transactions', authenticateToken, (req, res) => {
 
   const userId = req.user.id;
 
-  const sql = `
-    SELECT t.*, 
-           u1.email AS sender_email,
-           u2.email AS receiver_email
-    FROM transactions t
-    LEFT JOIN users u1 ON t.sender_id = u1.id
-    LEFT JOIN users u2 ON t.receiver_id = u2.id
-    WHERE sender_id = ? OR receiver_id = ?
-    ORDER BY t.created_at DESC
-  `;
+const sql = `
+  SELECT t.*, 
+         u1.email AS sender_email,
+         u2.email AS receiver_email,
+         g.gift_code
+  FROM transactions t
+  LEFT JOIN users u1 ON t.sender_id = u1.id
+  LEFT JOIN users u2 ON t.receiver_id = u2.id
+  LEFT JOIN gifts g 
+    ON g.sender_id = t.sender_id 
+    AND g.amount = ABS(t.amount)
+  WHERE t.sender_id = ? OR t.receiver_id = ?
+  ORDER BY t.created_at DESC
+`;
 
   db.query(sql, [userId, userId], (err, result) => {
     if (err) return res.status(500).send(err);
