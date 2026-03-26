@@ -521,17 +521,35 @@ app.get('/transactions', authenticateToken, (req, res) => {
   const userId = req.user.id;
 
 const sql = `
-  SELECT t.*, 
-         u1.email AS sender_email,
-         u2.email AS receiver_email,
-         g.gift_code
+  SELECT 
+    t.id,
+    t.sender_id,
+    t.receiver_id,
+    t.amount,
+    t.created_at,
+
+    u1.email AS sender_email,
+    u2.email AS receiver_email,
+
+    g.gift_code,
+    g.receiver_email AS gift_receiver_email,
+    g.status
+
   FROM transactions t
-  LEFT JOIN users u1 ON t.sender_id = u1.id
-  LEFT JOIN users u2 ON t.receiver_id = u2.id
+
+  LEFT JOIN users u1 
+    ON t.sender_id = u1.id
+
+  LEFT JOIN users u2 
+    ON t.receiver_id = u2.id
+
   LEFT JOIN gifts g 
-    ON g.sender_id = t.sender_id 
-    AND g.amount = ABS(t.amount)
-  WHERE t.sender_id = ? OR t.receiver_id = ?
+    ON g.receiver_email = u2.email
+    AND g.amount = t.amount
+
+  WHERE t.sender_id = ? 
+     OR t.receiver_id = ?
+
   ORDER BY t.created_at DESC
 `;
 
