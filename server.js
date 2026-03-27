@@ -529,10 +529,7 @@ app.get('/transactions', authenticateToken, (req, res) => {
       t.created_at,
 
       sender.email AS sender_email,
-      receiver.email AS receiver_email,
-
-      g.gift_code,
-      g.status
+      receiver.email AS receiver_email
 
     FROM transactions t
 
@@ -541,10 +538,6 @@ app.get('/transactions', authenticateToken, (req, res) => {
 
     LEFT JOIN users receiver
       ON receiver.id = t.receiver_id
-
-    LEFT JOIN gifts g
-      ON g.sender_id = t.sender_id
-      AND g.receiver_email = receiver.email
 
     WHERE 
       t.sender_id = ?
