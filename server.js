@@ -563,41 +563,7 @@ app.get('/transactions', authenticateToken, (req, res) => {
 
 });
 
-// ============================
-// 🎁 GET RECEIVED GIFTS
-// ============================
 
-app.get('/received-gifts', authenticateToken, (req, res) => {
-
-  const userEmail = req.user.email;
-
-  const sql = `
-    SELECT 
-      g.gift_code,
-      g.amount,
-      g.status,
-      g.created_at,
-      u.email AS sender_email
-
-    FROM gifts g
-
-    LEFT JOIN users u 
-      ON g.sender_id = u.id
-
-    WHERE g.receiver_email = ?
-
-    ORDER BY g.created_at DESC
-  `;
-
-  db.query(sql, [userEmail], (err, result) => {
-
-    if (err) return res.status(500).send(err);
-
-    res.send(result);
-
-  });
-
-});
 
 // ============================
 // 🎁 OPEN GIFT LINK FROM EMAIL
@@ -634,6 +600,42 @@ app.get('/gift/:code', (req, res) => {
       </body>
       </html>
     `);
+
+  });
+
+});
+
+// ============================
+// 🎁 GET RECEIVED GIFTS
+// ============================
+
+app.get('/received-gifts', authenticateToken, (req, res) => {
+
+  const userEmail = req.user.email;
+
+  const sql = `
+    SELECT 
+      g.gift_code,
+      g.amount,
+      g.status,
+      g.created_at,
+      u.email AS sender_email
+
+    FROM gifts g
+
+    LEFT JOIN users u 
+      ON g.sender_id = u.id
+
+    WHERE g.receiver_email = ?
+
+    ORDER BY g.created_at DESC
+  `;
+
+  db.query(sql, [userEmail], (err, result) => {
+
+    if (err) return res.status(500).send(err);
+
+    res.send(result);
 
   });
 
