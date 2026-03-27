@@ -377,6 +377,33 @@ db.query(
         [giftCode, senderId, receiverEmail, amount, distributionType]
       );
 
+      // FIND RECEIVER USER
+db.query(
+  "SELECT id FROM users WHERE email = ?",
+  [receiverEmail],
+  (err, userResult) => {
+
+    if (userResult.length > 0) {
+
+      const receiverId = userResult[0].id;
+
+      // SAVE NOTIFICATION
+      db.query(
+        `INSERT INTO notifications
+        (user_id, title, message)
+        VALUES (?, ?, ?)`,
+        [
+          receiverId,
+          "🎁 New Gift Received",
+          `You received ₹${amount} gift`
+        ]
+      );
+
+    }
+
+  }
+);
+
       // 5️⃣ SEND EMAIL
       const giftLink = `https://lucklove-backend.onrender.com/gift/${giftCode}`;
       
@@ -406,6 +433,48 @@ db.query(
 
     }
   );
+});
+
+// ============================
+// 🔔 GET NOTIFICATIONS
+// ============================
+
+app.get('/notifications', authenticateToken, (req, res) => {
+
+  const userId = req.user.id;
+
+  const sql = `
+    SELECT *
+    FROM notifications
+    WHERE user_id = ?
+    ORDER BY created_at DESC
+  `;
+
+  db.query(sql, [userId], (err, result) => {
+
+    if (err) return res.status(500).send(err);
+
+    res.send(result);
+
+  });
+
+});
+
+// ============================
+// MARK AS READ
+// ============================
+
+app.post('/notifications/read', authenticateToken, (req,res)=>{
+
+  const { id } = req.body;
+
+  db.query(
+    "UPDATE notifications SET is_read = TRUE WHERE id = ?",
+    [id]
+  );
+
+  res.send({ message:"Marked read" });
+
 });
 
 // =====================================================
