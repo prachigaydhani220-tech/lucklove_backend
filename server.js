@@ -315,6 +315,33 @@ app.post('/wallet/transfer', authenticateToken, (req, res) => {
   });
 });
 
+// ============================
+// 🎯 RANDOM SPLIT FUNCTION
+// ============================
+
+function randomSplit(total, count){
+
+  let parts = [];
+
+  let remaining = total;
+
+  for(let i=0; i<count-1; i++){
+
+    let val = Math.floor(
+      Math.random() * remaining
+    );
+
+    parts.push(val);
+
+    remaining -= val;
+
+  }
+
+  parts.push(remaining);
+
+  return parts;
+
+}
 
 // =====================================================
 // 🎁 NEW FEATURE — CREATE GIFT FOR ANY EMAIL
@@ -322,9 +349,30 @@ app.post('/wallet/transfer', authenticateToken, (req, res) => {
 app.post('/create-gift', authenticateToken, async (req, res) => {
 
   const senderId = req.user.id;
-  const { receiverEmail, amount, distributionType } = req.body;
+  const { receiverEmail, amount, distributionType, receiverCount } = req.body;
 
   const giftCode = Math.random().toString(36).substring(2,10);
+
+  // ============================
+// DISTRIBUTION LOGIC
+// ============================
+
+let finalAmount = amount;
+
+if(distributionType === "Random" && receiverCount){
+
+  let parts =
+  randomSplit(amount, receiverCount);
+
+  finalAmount = parts[0];
+
+}
+else if(distributionType === "Equal" && receiverCount){
+
+  finalAmount =
+  Math.floor(amount / receiverCount);
+
+}
 
   // 1️⃣ CHECK BALANCE FIRST
   db.query(
@@ -372,14 +420,15 @@ db.query(
      // 4️⃣ CREATE GIFT RECORD
 db.query(
   `INSERT INTO gifts 
-  (gift_code, sender_id, receiver_email, amount, distribution_type)
-  VALUES (?, ?, ?, ?, ?)`,
+(gift_code, sender_id, receiver_email, amount, distribution_type, remaining_amount)
+  VALUES (?, ?, ?, ?, ?, ?)`,
   [
     giftCode,
     senderId,
     receiverEmail,
     amount,
-    distributionType // fallback
+    distributionType,
+    finalAmount   // ⭐ IMPORTANT
   ]
 );
 
@@ -484,46 +533,80 @@ app.post('/notifications/read', authenticateToken, (req,res)=>{
 });
 
 // =====================================================
-// 🎁 CLAIM GIFT
+// 🎁 CLAIM GIFT (FINAL FIXED VERSION)
 // =====================================================
+
 app.post('/claim-gift', authenticateToken, (req,res)=>{
 
   const { giftCode } = req.body;
   const userId = req.user.id;
 
-  const sql = "SELECT * FROM gifts WHERE gift_code = ?";
+  const sql =
+  "SELECT * FROM gifts WHERE gift_code = ?";
 
   db.query(sql,[giftCode],(err,result)=>{
 
-    if(err) return res.status(500).send(err);
+    if(err)
+      return res.status(500).send(err);
 
     if(result.length === 0)
-      return res.status(404).send({message:"Gift not found"});
+      return res.status(404).send({
+        message:"Gift not found"
+      });
 
     const gift = result[0];
 
+    // already claimed check
     if(gift.status === "claimed")
-      return res.send({message:"Gift already claimed"});
+      return res.send({
+        message:"Gift already claimed"
+      });
 
-    // add money to receiver wallet
-db.query(
-  "UPDATE wallets SET balance = balance + ? WHERE user_id = ?",
-  [gift.amount,userId]
-);
+    // ⭐ VERY IMPORTANT
+    // use remaining_amount not full amount
 
-// record transaction
-db.query(
-  "INSERT INTO transactions (sender_id, receiver_id, amount) VALUES (?, ?, ?)",
-  [gift.sender_id, userId, gift.amount]
-);
+    const winAmount =
+    gift.remaining_amount || gift.amount;
 
-// mark gift claimed
-db.query(
-  "UPDATE gifts SET status='claimed' WHERE gift_code=?",
-  [giftCode]
-);
+    // ==========================
+    // ADD MONEY TO WALLET
+    // ==========================
 
-    res.send({message:"Gift claimed 🎉"});
+    db.query(
+      "UPDATE wallets SET balance = balance + ? WHERE user_id = ?",
+      [winAmount, userId]
+    );
+
+    // ==========================
+    // SAVE TRANSACTION
+    // ==========================
+
+    db.query(
+      "INSERT INTO transactions (sender_id, receiver_id, amount) VALUES (?, ?, ?)",
+      [
+        gift.sender_id,
+        userId,
+        winAmount
+      ]
+    );
+
+    // ==========================
+    // MARK GIFT CLAIMED
+    // ==========================
+
+    db.query(
+      "UPDATE gifts SET status='claimed' WHERE gift_code=?",
+      [giftCode]
+    );
+
+    // ==========================
+    // RESPONSE
+    // ==========================
+
+    res.send({
+      message:"Gift claimed 🎉",
+      winAmount: winAmount
+    });
 
   });
 
