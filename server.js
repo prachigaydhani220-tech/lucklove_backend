@@ -369,13 +369,19 @@ db.query(
   }
 );
 
-      // 4️⃣ CREATE GIFT RECORD
-      db.query(
-        `INSERT INTO gifts 
-        (gift_code, sender_id, receiver_email, amount, distribution_type)
-        VALUES (?, ?, ?, ?, ?)`,
-        [giftCode, senderId, receiverEmail, amount, distributionType]
-      );
+     // 4️⃣ CREATE GIFT RECORD
+db.query(
+  `INSERT INTO gifts 
+  (gift_code, sender_id, receiver_email, amount, distribution_type)
+  VALUES (?, ?, ?, ?, ?)`,
+  [
+    giftCode,
+    senderId,
+    receiverEmail,
+    amount,
+    distributionType // fallback
+  ]
+);
 
       // FIND RECEIVER USER
 db.query(
@@ -676,12 +682,13 @@ app.get('/received-gifts', authenticateToken, (req, res) => {
   const userEmail = req.user.email;
 
   const sql = `
-    SELECT 
-      g.gift_code,
-      g.amount,
-      g.status,
-      g.created_at,
-      u.email AS sender_email
+   SELECT 
+  g.gift_code,
+  g.amount,
+  g.status,
+  g.created_at,
+  g.distribution_type,   -- ADD THIS
+  u.email AS sender_email
 
     FROM gifts g
 
