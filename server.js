@@ -353,24 +353,45 @@ app.post('/create-gift', authenticateToken, async (req, res) => {
 
   const giftCode = Math.random().toString(36).substring(2,10);
 
-  // ============================
-// DISTRIBUTION LOGIC
-// ============================
-
 let finalAmount = amount;
+
+// ============================
+// RANDOM DISTRIBUTION
+// ============================
 
 if(distributionType === "Random" && receiverCount){
 
   let parts =
   randomSplit(amount, receiverCount);
 
-  finalAmount = parts[0];
+  // pick random share
+  finalAmount =
+  parts[
+    Math.floor(
+      Math.random() * parts.length
+    )
+  ];
 
 }
+
+// ============================
+// EQUAL DISTRIBUTION
+// ============================
+
 else if(distributionType === "Equal" && receiverCount){
 
   finalAmount =
   Math.floor(amount / receiverCount);
+
+}
+
+// ============================
+// GAME DISTRIBUTION
+// ============================
+
+else if(distributionType === "Game"){
+
+  finalAmount = amount;
 
 }
 
@@ -766,12 +787,13 @@ app.get('/received-gifts', authenticateToken, (req, res) => {
 
   const sql = `
    SELECT 
-  g.gift_code,
-  g.amount,
-  g.status,
-  g.created_at,
-  g.distribution_type,   -- ADD THIS
-  u.email AS sender_email
+g.gift_code,
+g.amount,
+g.remaining_amount,
+g.status,
+g.created_at,
+g.distribution_type,
+u.email AS sender_email
 
     FROM gifts g
 
