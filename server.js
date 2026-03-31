@@ -346,51 +346,55 @@ function randomSplit(total, count){
 // =====================================================
 // 🎁 NEW FEATURE — CREATE GIFT FOR ANY EMAIL
 // =====================================================
-app.post('/create-gift', authenticateToken, async (req, res) => {
+app.post('/create-gift', authenticateToken, (req, res) => {
 
   const senderId = req.user.id;
- const {
-  receiverEmails,
-  amount,
-  distributionType,
-  receiverCount
-} = req.body;
 
-const emailList =
-receiverEmails.split(",");
+  const {
+    receiverEmails,
+    amount,
+    distributionType,
+    receiverCount
+  } = req.body;
 
-  const giftCode = Math.random().toString(36).substring(2,10);
+  // SPLIT EMAILS
+  const emailList =
+  receiverEmails.split(",");
 
-let splitAmounts = [];
+  let splitAmounts = [];
 
-// RANDOM
-if(distributionType === "Random"){
+  // ============================
+  // SPLIT LOGIC
+  // ============================
 
-  splitAmounts =
-  randomSplit(amount, receiverCount);
+  if(distributionType === "Random"){
 
-}
+    splitAmounts =
+    randomSplit(amount, receiverCount);
 
-// EQUAL
-else if(distributionType === "Equal"){
+  }
 
-  let each =
-  Math.floor(amount / receiverCount);
+  else if(distributionType === "Equal"){
 
-  splitAmounts =
-  Array(receiverCount).fill(each);
+    let each =
+    Math.floor(amount / receiverCount);
 
-}
+    splitAmounts =
+    Array(receiverCount).fill(each);
 
-// GAME
-else if(distributionType === "Game"){
+  }
 
-  splitAmounts =
-  randomSplit(amount, receiverCount);
+  else if(distributionType === "Game"){
 
-}
+    splitAmounts =
+    randomSplit(amount, receiverCount);
 
-  // 1️⃣ CHECK BALANCE FIRST
+  }
+
+  // ============================
+  // CHECK BALANCE
+  // ============================
+
   db.query(
     "SELECT balance FROM wallets WHERE user_id = ?",
     [senderId],
@@ -398,131 +402,123 @@ else if(distributionType === "Game"){
 
       if (err) return res.status(500).send(err);
 
-      const balance = result[0].balance;
+      const balance =
+      result[0].balance;
 
-      if (balance < amount) {
+      if(balance < amount){
+
         return res.status(400).send({
-          message: "Insufficient balance"
+          message:"Insufficient balance"
         });
+
       }
 
-      // 2️⃣ DEDUCT MONEY
+      // ============================
+      // DEDUCT MONEY ONCE
+      // ============================
+
       db.query(
         "UPDATE wallets SET balance = balance - ? WHERE user_id = ?",
         [amount, senderId]
       );
 
-      // 3️⃣ INSERT TRANSACTION (SENT GIFT)
+      // ============================
+      // CREATE GIFTS
+      // ============================
 
-db.query(
-  "SELECT id FROM users WHERE email = ?",
-  [receiverEmail],
-  (err, userResult) => {
+      emailList.forEach((email,index)=>{
 
-    let receiverId = null;
+        const giftCode =
+        Math.random()
+        .toString(36)
+        .substring(2,10);
 
-    if (userResult.length > 0) {
-      receiverId = userResult[0].id;
-    }
+        const finalAmount =
+        splitAmounts[index];
 
-    db.query(
-      "INSERT INTO transactions (sender_id, receiver_id, amount) VALUES (?, ?, ?)",
-      [senderId, receiverId, -amount]
-    );
+        // INSERT GIFT
 
-  }
-);
-
-    // ============================
-// 4️⃣ CREATE MULTIPLE GIFTS
-// ============================
-
-emailList.forEach((email, index) => {
-
-  const giftCode =
-  Math.random().toString(36)
-  .substring(2,10);
-
-  const finalAmount =
-  splitAmounts[index];
-
-  // INSERT GIFT
-  db.query(
-    `INSERT INTO gifts 
-    (gift_code, sender_id, receiver_email,
-     amount, distribution_type,
-     remaining_amount)
-
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [
-      giftCode,
-      senderId,
-      email,
-      amount,
-      distributionType,
-      finalAmount
-    ]
-  );
-
-  // FIND RECEIVER USER
-  db.query(
-    "SELECT id FROM users WHERE email = ?",
-    [email],
-    (err, userResult) => {
-
-      if (userResult.length > 0) {
-
-        const receiverId =
-        userResult[0].id;
-
-        // SAVE NOTIFICATION
         db.query(
-          `INSERT INTO notifications
-          (user_id, title, message)
-          VALUES (?, ?, ?)`,
+          `INSERT INTO gifts
+          (gift_code,
+           sender_id,
+           receiver_email,
+           amount,
+           distribution_type,
+           remaining_amount)
+
+           VALUES (?, ?, ?, ?, ?, ?)`,
           [
-            receiverId,
-            "🎁 New Gift Received",
-            `You received a gift 🎁`
+            giftCode,
+            senderId,
+            email,
+            amount,
+            distributionType,
+            finalAmount
           ]
         );
 
-      }
+        // SAVE TRANSACTION
 
-    }
-  );
+        db.query(
+          "SELECT id FROM users WHERE email = ?",
+          [email],
+          (err,userResult)=>{
 
-});
+            if(userResult.length > 0){
 
-      // 5️⃣ SEND EMAIL
-      const giftLink = `https://lucklove-backend.onrender.com/gift/${giftCode}`;
-      
+              const receiverId =
+              userResult[0].id;
 
- resend.emails.send({
-  from: 'LuckLove <buildality@aiaj.tech>',
-  to: receiverEmail,
-  subject: '🎁 You received a LuckLove Gift!',
-  html: `
-    <h2>LuckLove Gift 🎁</h2>
-    <p>You received <b>₹${amount}</b></p>
-    <p>Click below to open your gift:</p>
-    <a href="${giftLink}">${giftLink}</a>
-  `
-})
-.then(() => {
-  console.log("Email sent successfully");
-})
-.catch((error) => {
-  console.log("Email error:", error);
-});
+              db.query(
+                "INSERT INTO transactions (sender_id, receiver_id, amount) VALUES (?, ?, ?)",
+                [
+                  senderId,
+                  receiverId,
+                  -finalAmount
+                ]
+              );
+
+              // NOTIFICATION
+
+              db.query(
+                `INSERT INTO notifications
+                (user_id,title,message)
+                VALUES (?, ?, ?)`,
+                [
+                  receiverId,
+                  "🎁 New Gift Received",
+                  `You received a gift 🎁`
+                ]
+              );
+
+              // EMAIL
+
+              resend.emails.send({
+                from:'LuckLove <buildality@aiaj.tech>',
+                to: email,
+                subject:'🎁 You received a LuckLove Gift!',
+                html:`
+                  <h2>LuckLove Gift 🎁</h2>
+                  <p>You received a gift!</p>
+                `
+              });
+
+            }
+
+          }
+        );
+
+      });
 
       res.send({
-        message: "Gift created successfully",
-        giftCode: giftCode
+        message:"Gift created successfully"
       });
 
     }
+
   );
+
 });
 
 // ============================
