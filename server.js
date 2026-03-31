@@ -349,49 +349,44 @@ function randomSplit(total, count){
 app.post('/create-gift', authenticateToken, async (req, res) => {
 
   const senderId = req.user.id;
-  const { receiverEmail, amount, distributionType, receiverCount } = req.body;
+ const {
+  receiverEmails,
+  amount,
+  distributionType,
+  receiverCount
+} = req.body;
+
+const emailList =
+receiverEmails.split(",");
 
   const giftCode = Math.random().toString(36).substring(2,10);
 
-let finalAmount = amount;
+let splitAmounts = [];
 
-// ============================
-// RANDOM DISTRIBUTION
-// ============================
+// RANDOM
+if(distributionType === "Random"){
 
-if(distributionType === "Random" && receiverCount){
-
-  let parts =
+  splitAmounts =
   randomSplit(amount, receiverCount);
 
-  // pick random share
-  finalAmount =
-  parts[
-    Math.floor(
-      Math.random() * parts.length
-    )
-  ];
-
 }
 
-// ============================
-// EQUAL DISTRIBUTION
-// ============================
+// EQUAL
+else if(distributionType === "Equal"){
 
-else if(distributionType === "Equal" && receiverCount){
-
-  finalAmount =
+  let each =
   Math.floor(amount / receiverCount);
 
+  splitAmounts =
+  Array(receiverCount).fill(each);
+
 }
 
-// ============================
-// GAME DISTRIBUTION
-// ============================
-
+// GAME
 else if(distributionType === "Game"){
 
-  finalAmount = amount;
+  splitAmounts =
+  randomSplit(amount, receiverCount);
 
 }
 
@@ -438,47 +433,66 @@ db.query(
   }
 );
 
-     // 4️⃣ CREATE GIFT RECORD
-db.query(
-  `INSERT INTO gifts 
-(gift_code, sender_id, receiver_email, amount, distribution_type, remaining_amount)
-  VALUES (?, ?, ?, ?, ?, ?)`,
-  [
-    giftCode,
-    senderId,
-    receiverEmail,
-    amount,
-    distributionType,
-    finalAmount   // ⭐ IMPORTANT
-  ]
-);
+    // ============================
+// 4️⃣ CREATE MULTIPLE GIFTS
+// ============================
 
-      // FIND RECEIVER USER
-db.query(
-  "SELECT id FROM users WHERE email = ?",
-  [receiverEmail],
-  (err, userResult) => {
+emailList.forEach((email, index) => {
 
-    if (userResult.length > 0) {
+  const giftCode =
+  Math.random().toString(36)
+  .substring(2,10);
 
-      const receiverId = userResult[0].id;
+  const finalAmount =
+  splitAmounts[index];
 
-      // SAVE NOTIFICATION
-      db.query(
-        `INSERT INTO notifications
-        (user_id, title, message)
-        VALUES (?, ?, ?)`,
-        [
-          receiverId,
-          "🎁 New Gift Received",
-          `You received ₹${amount} gift`
-        ]
-      );
+  // INSERT GIFT
+  db.query(
+    `INSERT INTO gifts 
+    (gift_code, sender_id, receiver_email,
+     amount, distribution_type,
+     remaining_amount)
+
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [
+      giftCode,
+      senderId,
+      email,
+      amount,
+      distributionType,
+      finalAmount
+    ]
+  );
+
+  // FIND RECEIVER USER
+  db.query(
+    "SELECT id FROM users WHERE email = ?",
+    [email],
+    (err, userResult) => {
+
+      if (userResult.length > 0) {
+
+        const receiverId =
+        userResult[0].id;
+
+        // SAVE NOTIFICATION
+        db.query(
+          `INSERT INTO notifications
+          (user_id, title, message)
+          VALUES (?, ?, ?)`,
+          [
+            receiverId,
+            "🎁 New Gift Received",
+            `You received a gift 🎁`
+          ]
+        );
+
+      }
 
     }
+  );
 
-  }
-);
+});
 
       // 5️⃣ SEND EMAIL
       const giftLink = `https://lucklove-backend.onrender.com/gift/${giftCode}`;
