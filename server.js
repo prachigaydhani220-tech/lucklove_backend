@@ -367,29 +367,27 @@ app.post('/create-gift', authenticateToken, (req, res) => {
   // SPLIT LOGIC
   // ============================
 
-  if(distributionType === "Random"){
+  if(
+  distributionType === "Random" ||
+  distributionType === "Game-Random"
+){
 
-    splitAmounts =
-    randomSplit(amount, receiverCount);
+  splitAmounts =
+  randomSplit(amount, receiverCount);
 
-  }
+}
+else if(
+  distributionType === "Equal" ||
+  distributionType === "Game-Equal"
+){
 
-  else if(distributionType === "Equal"){
+  let each =
+  Math.floor(amount / receiverCount);
 
-    let each =
-    Math.floor(amount / receiverCount);
+  splitAmounts =
+  Array(receiverCount).fill(each);
 
-    splitAmounts =
-    Array(receiverCount).fill(each);
-
-  }
-
-  else if(distributionType === "Game"){
-
-    splitAmounts =
-    randomSplit(amount, receiverCount);
-
-  }
+}
 
   // ============================
   // CHECK BALANCE
