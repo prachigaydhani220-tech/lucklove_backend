@@ -327,9 +327,13 @@ function randomSplit(total, count){
 
   for(let i=0; i<count-1; i++){
 
-    let val = Math.floor(
-      Math.random() * remaining
-    );
+    let max =
+    remaining - (count - i - 1);
+
+    let val =
+    Math.floor(
+      Math.random() * max
+    ) + 1;
 
     parts.push(val);
 
@@ -437,24 +441,29 @@ else if(
         // INSERT GIFT
 
         db.query(
-          `INSERT INTO gifts
-          (gift_code,
-           sender_id,
-           receiver_email,
-           amount,
-           distribution_type,
-           remaining_amount)
+  `INSERT INTO gifts
+  (gift_code,
+   sender_id,
+   receiver_email,
+   amount,
+   distribution_type,
+   remaining_amount,
+   status)
 
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [
-            giftCode,
-            senderId,
-            email,
-            amount,
-            distributionType,
-            finalAmount
-          ]
-        );
+   VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  [
+    giftCode,
+    senderId,
+    email,
+
+    finalAmount,   // ⭐ VERY IMPORTANT
+    distributionType,
+
+    finalAmount,   // ⭐ remaining = split amount
+
+    "pending"
+  ]
+);
 
         // SAVE TRANSACTION
 
@@ -571,7 +580,7 @@ app.post('/claim-gift', authenticateToken, (req,res)=>{
   const userId = req.user.id;
 
   const sql =
-  "SELECT * FROM gifts WHERE gift_code = ?";
+"SELECT * FROM gifts WHERE gift_code = ? AND status != 'claimed'";
 
   db.query(sql,[giftCode],(err,result)=>{
 
@@ -595,7 +604,7 @@ app.post('/claim-gift', authenticateToken, (req,res)=>{
     // use remaining_amount not full amount
 
     const winAmount =
-    gift.remaining_amount || gift.amount;
+    parseInt(gift.remaining_amount);
 
     // ==========================
     // ADD MONEY TO WALLET
