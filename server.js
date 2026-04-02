@@ -833,6 +833,27 @@ u.email AS sender_email
 });
 
 // ============================
+// MARK ALL AS READ
+// ============================
+
+app.post('/notifications/read-all',
+authenticateToken,
+(req,res)=>{
+
+  const userId = req.user.id;
+
+  db.query(
+    "UPDATE notifications SET is_read = 1 WHERE user_id = ?",
+    [userId]
+  );
+
+  res.send({
+    message:"All notifications marked read"
+  });
+
+});
+
+// ============================
 // TEST ROUTE
 // ============================
 app.get('/', (req, res) => {
